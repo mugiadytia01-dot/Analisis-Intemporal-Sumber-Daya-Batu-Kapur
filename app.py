@@ -18,7 +18,7 @@ with col_judul:
     with col_identitas1:
         st.markdown("### **Kelompok 8 - Ekonomi Pembangunan**")
     with col_identitas2:
-        st.markdown("### **Dosen Pengampu: Yukha Sundaya**")
+        st.markdown("### **Dosen Pengampu: Yukha Sundaya S.E., M.Si.**")
     
     st.markdown("""
     **Anggota Kelompok:** Muhamad Bagya Adytia (10090224006) &nbsp; | &nbsp; Ridho Ahmad Fauzi (10090224031)
