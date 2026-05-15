@@ -11,7 +11,7 @@ with col_logo:
     st.image("logo unisba.png", width=110) 
 
 with col_judul:
-    st.title("Analisis Intemporal Sumber Daya Alam: Komoditas Batu Kapur")
+    st.title("Analisis Intertemporal Sumber Daya Alam: Komoditas Batu Kapur")
     st.markdown("#### **PT. Solusi Bangun Indonesia**")
     
     col_identitas1, col_identitas2 = st.columns([2, 1])
