@@ -245,7 +245,63 @@ with tab3:
         st.error("⚠️ **Efek Persaingan Sempurna:** Produksi sangat tinggi dengan harga rendah (P=MC). Cadangan batu kapur akan habis dalam waktu paling singkat (Deplesi Tercepat).")
     else:
         st.success(f"✅ **Efek Oligopoli:** Dengan {n} perusahaan, tingkat deplesi dan kesejahteraan berada pada titik moderat.")
+    
+    st.markdown("<br><hr>", unsafe_allow_html=True)
+    st.subheader("Tabel Perbandingan Skenario Struktur Pasar")
+    st.write("Berikut adalah perbandingan metrik ekonomi antara Monopoli, Oligopoli (berdasarkan *slider*), dan Persaingan Sempurna dengan menggunakan parameter saat ini:")
 
+    # 1. Perhitungan Skenario Monopoli Mutlak (n = 1)
+    q_monopoli = (A - MC) / (2 * B)
+    p_monopoli = A - (B * q_monopoli)
+    profit_monopoli = (p_monopoli - MC) * q_monopoli
+
+    # 2. Perhitungan Skenario Persaingan Sempurna Mutlak (P = MC)
+    q_sempurna = (A - MC) / B
+    p_sempurna = MC
+    profit_sempurna = 0
+
+    # 3. Skenario Oligopoli diambil dari variabel yang sudah dihitung sebelumnya di atas
+    # (q_ekuilibrium, p_ekuilibrium, dan profit_total)
+
+    # Membuat DataFrame untuk Tabel Perbandingan
+    df_perbandingan = pd.DataFrame({
+        "Indikator Ekonomi": [
+            "Kuantitas Produksi / Ekstraksi (Q)", 
+            "Harga Pasar (P)", 
+            "Total Profit Industri", 
+            "Kecepatan Deplesi Cadangan"
+        ],
+        "Skenario Monopoli": [
+            f"{q_monopoli:,.0f} Ton", 
+            f"Rp {p_monopoli:,.0f}", 
+            f"Rp {profit_monopoli:,.0f}", 
+            "Paling Lambat"
+        ],
+        f"Skenario Saat Ini (n={n})": [
+            f"{q_ekuilibrium:,.0f} Ton", 
+            f"Rp {p_ekuilibrium:,.0f}", 
+            f"Rp {profit_total:,.0f}", 
+            "Moderat"
+        ],
+        "Persaingan Sempurna": [
+            f"{q_sempurna:,.0f} Ton", 
+            f"Rp {p_sempurna:,.0f}", 
+            "Rp 0 (Break-Even)", 
+            "Paling Cepat"
+        ]
+    }).set_index("Indikator Ekonomi")
+
+    # Menampilkan tabel perbandingan
+    st.table(df_perbandingan)
+
+    # Menambahkan rangkuman kesimpulan di bawah tabel
+    st.info("""
+    **Kesimpulan Analisis:**
+    * **Monopoli** menghasilkan profit tertinggi bagi perusahaan ekstraktif, namun sangat merugikan konsumen karena harga yang tinggi.
+    * **Persaingan Sempurna** memberikan harga ekuilibrium terendah bagi konsumen, namun memicu eksploitasi besar-besaran yang mengancam ketahanan cadangan (deplesi masif).
+    * Dalam industri batu kapur dengan hambatan masuk tinggi (*barrier to entry*), struktur **Oligopoli** merupakan kondisi paling realistis yang terjadi di lapangan.
+    """)
+    
 with tab4:
     st.header("Simulasi Penurunan Stok Sumber Daya (Deplesi)")
     cadangan_awal = st.number_input("Masukkan Estimasi Cadangan Awal Tahun 2014 (Ton / Juta Ton)", min_value=50.0, value=250.0, step=10.0)
