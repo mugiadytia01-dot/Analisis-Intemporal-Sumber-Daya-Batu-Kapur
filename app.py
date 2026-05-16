@@ -49,6 +49,13 @@ jumlah_perusahaan = st.sidebar.slider("Jumlah Perusahaan di Pasar", 1, 10, 3)
 st.sidebar.markdown("---")
 st.sidebar.write("💡 *Parameter di atas akan otomatis mengubah seluruh perhitungan di grafik.*")
 
+st.sidebar.markdown("---")
+st.sidebar.subheader("Parameter Struktur Pasar")
+permintaan_max = st.sidebar.slider("Permintaan Maksimum (A)", 1000000, 3000000, 2000000)
+slope = st.sidebar.slider("Slope Permintaan (B)", 0.01, 0.50, 0.10)
+# Slider 'n' inilah yang akan mengubah struktur pasar secara otomatis
+jumlah_perusahaan = st.sidebar.slider("Jumlah Perusahaan (n)", 1, 50, 3)
+
 st.sidebar.markdown("<br><br>", unsafe_allow_html=True) 
 st.sidebar.markdown("<h4 style='text-align: center; color: gray;'>FEB UNISBA | Ekonomi Sumber Daya Alam</h4>", unsafe_allow_html=True)
 
@@ -170,52 +177,74 @@ with tab2:
 
 with tab3:
     st.title("Simulasi Dinamis Struktur Pasar")
-    st.write("Gunakan slider di sidebar untuk melihat perubahan ekuilibrium pasar secara real-time.")
+    
+    # --- LANDASAN TEORI (Sesuai Permintaan Dosen) ---
+    st.info("""
+    **Landasan Teoritis:** Struktur pasar menentukan bagaimana harga dan kuantitas produksi ditetapkan, yang pada gilirannya memengaruhi kecepatan deplesi cadangan. 
+    Tiga struktur yang dianalisis:
+    1. **Persaingan Sempurna ($P = MC$):** Efisien secara statik namun mengakibatkan deplesi (pengurasan) cadangan tercepat.
+    2. **Oligopoli Cournot ($n$ perusahaan):** Perusahaan bersaing dalam kuantitas, menghasilkan output di antara monopoli dan persaingan sempurna.
+    3. **Monopoli ($MR = MC$):** Harga ditetapkan di atas MC, produksi ditekan — secara paradoks memperlambat deplesi cadangan namun menciptakan kerugian kesejahteraan (*deadweight loss*).
+    """)
 
-    # 1. LOGIKA PERHITUNGAN EKUILIBRIUM (Dipindah ke atas agar jadi acuan)
-    # Ekuilibrium Pasar (Model Cournot / Monopoli)
-    q_opt_total = (permintaan_max - biaya_ekstraksi) / (slope * (jumlah_perusahaan + 1))
-    
-    # Fungsi Permintaan: P = A - B*Q
-    def hitung_harga(q):
-        return permintaan_max - (slope * q)
-        
-    p_opt = hitung_harga(q_opt_total)
-    
-    # Pencegahan error jika profit negatif (MC lebih tinggi dari Harga)
-    if p_opt < biaya_ekstraksi:
-        profit_per_perusahaan = 0
+    st.markdown("---")
+
+    # --- LOGIKA PERHITUNGAN EKONOMI (MODEL COURNOT) ---
+    # Rumus Umum Kuantitas Ekuilibrium: Q = (n / (n+1)) * ((A - MC) / B)
+    n = jumlah_perusahaan
+    A = permintaan_max
+    B = slope
+    MC = biaya_ekstraksi
+
+    # 1. Menghitung Kuantitas (Q) dan Harga (P) Ekuilibrium
+    if n >= 50: # Asumsi Persaingan Sempurna jika n besar
+        q_ekuilibrium = (A - MC) / B
+        label_pasar = "Persaingan Sempurna"
+    elif n == 1:
+        q_ekuilibrium = (A - MC) / (2 * B)
+        label_pasar = "Monopoli"
     else:
-        profit_per_perusahaan = (p_opt - biaya_ekstraksi) * (q_opt_total / jumlah_perusahaan)
+        q_ekuilibrium = (n / (n + 1)) * ((A - MC) / B)
+        label_pasar = f"Oligopoli Cournot (n={n})"
 
-    # 2. PEMBUATAN RENTANG GRAFIK YANG AMAN
-    # Menggunakan batas atas 2x lipat dari titik ekuilibrium agar grafik terpusat dan tidak membebani memori
-    batas_atas_q = int(q_opt_total * 2) 
+    p_ekuilibrium = A - (B * q_ekuilibrium)
+    profit_total = (p_ekuilibrium - MC) * q_ekuilibrium
+
+    # --- VISUALISASI GRAFIK BERGERAK ---
+    # Membuat rentang Sumbu X (Kuantitas)
+    batas_q = (A - MC) / B # Titik di mana P = MC (Persaingan Sempurna)
+    q_axis = np.linspace(0, batas_q * 1.2, 100)
     
-    # Jika batas atas bernilai 0 atau negatif (karena input tidak logis), kita beri nilai default
-    if batas_atas_q <= 0:
-        batas_atas_q = 1000
-        
-    q_range = np.linspace(0, batas_atas_q, 100)
+    # Kurva Permintaan (P = A - BQ)
+    p_demand = A - (B * q_axis)
+    # Kurva Marginal Revenue (MR = A - 2BQ) - Hanya muncul untuk Monopoli
+    p_mr = A - (2 * B * q_axis)
+    
+    df_grafik = pd.DataFrame({
+        "Kuantitas": q_axis,
+        "Harga Permintaan (P)": p_demand,
+        "Biaya Marginal (MC)": [MC] * 100,
+        "Marginal Revenue (MR)": p_mr
+    }).set_index("Kuantitas")
 
-    # 3. VISUALISASI DINAMIS (st.line_chart)
-    df_plot = pd.DataFrame({
-        "Kuantitas (Ton)": q_range,
-        "Harga Permintaan (Rp)": [hitung_harga(q) for q in q_range],
-        "Biaya Marginal (MC)": [biaya_ekstraksi] * 100
-    }).set_index("Kuantitas (Ton)")
+    st.subheader(f"Grafik Ekuilibrium: {label_pasar}")
+    
+    # Menampilkan grafik yang bergerak mengikuti slider
+    st.line_chart(df_grafik, color=["#2563eb", "#ef4444", "#f59e0b"])
 
-    st.subheader("Kurva Permintaan vs Biaya Marginal")
-    # Warna: Biru untuk Harga Permintaan, Merah untuk Garis MC
-    st.line_chart(df_plot, color=["#2563eb", "#ef4444"]) 
-
-    # 4. OUTPUT METRIK DINAMIS
+    # --- OUTPUT METRIK ---
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total Output Pasar", f"{q_opt_total:,.0f} Ton")
-    col2.metric("Harga Ekuilibrium", f"Rp {p_opt:,.0f}")
-    col3.metric("Profit Per Perusahaan", f"Rp {profit_per_perusahaan:,.0f}")
+    col1.metric("Kuantitas Produksi (Q)", f"{q_ekuilibrium:,.0f} Ton")
+    col2.metric("Harga Pasar (P)", f"Rp {p_ekuilibrium:,.0f}")
+    col3.metric("Total Profit Industri", f"Rp {profit_total:,.0f}")
 
-    st.info(f"Berdasarkan parameter saat ini, pasar disimulasikan sebagai **{'Monopoli' if jumlah_perusahaan == 1 else 'Oligopoli'}**.")
+    # --- PENJELASAN DINAMIS ---
+    if n == 1:
+        st.warning("⚠️ **Efek Monopoli:** Produksi ditekan rendah agar harga tetap tinggi. Deplesi cadangan batu kapur menjadi yang paling lambat, namun terjadi *Deadweight Loss* yang tinggi.")
+    elif n >= 50:
+        st.error("⚠️ **Efek Persaingan Sempurna:** Produksi sangat tinggi dengan harga rendah (P=MC). Cadangan batu kapur akan habis dalam waktu paling singkat (Deplesi Tercepat).")
+    else:
+        st.success(f"✅ **Efek Oligopoli:** Dengan {n} perusahaan, tingkat deplesi dan kesejahteraan berada pada titik moderat.")
 
 with tab4:
     st.header("Simulasi Penurunan Stok Sumber Daya (Deplesi)")
