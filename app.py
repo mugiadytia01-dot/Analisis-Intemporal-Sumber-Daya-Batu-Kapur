@@ -102,30 +102,41 @@ with tab1:
         st.bar_chart(df.set_index("Tahun")["Q"], color="#795548") # Diberi warna cokelat kapur
 
 with tab2:
-    st.header("Analisis Aturan Hostelling (Hostelling Rule)")
-    st.latex(r"P_t = P_0 (1 + r)^t")
-    st.write("Aturan Hostelling menyatakan bahwa dalam pasar persaingan sempurna, harga bersih (net price) dari SDA tidak terbarukan akan meningkat sesuai tingkat diskonto.")
+    with tab2:
+    st.header("Analisis Aturan Hotelling (Hotelling's Rule)")
+    
+    # Menampilkan rumus yang sudah dikoreksi secara ekonomi
+    st.latex(r"MUC_t = MUC_0 (1 + r)^t")
+    st.latex(r"P_t = MC + MUC_t")
+    
+    st.write("Berdasarkan Aturan Hotelling, nilai kelangkaan (Marginal User Cost / MUC) dari sumber daya yang tidak dapat diperbarui akan meningkat sebesar tingkat diskonto. Harga pasar (P) terbentuk dari Biaya Ekstraksi (MC) ditambah MUC tersebut.")
     
     tahun_proyeksi = np.arange(2024, 2035)
     t_step = np.arange(0, 11)
     
-    proyeksi_harga = harga_kapur * (1 + diskonto)**t_step
-    net_price = proyeksi_harga - biaya_ekstraksi
+    # 1. Menghitung MUC yang tumbuh sesuai diskonto
+    proyeksi_muc = muc_awal * (1 + diskonto)**t_step
     
-    df_hostelling = pd.DataFrame({
+    # 2. Menghitung Harga Pasar (P)
+    proyeksi_harga = biaya_ekstraksi + proyeksi_muc
+    
+    df_hotelling = pd.DataFrame({
         "Tahun": tahun_proyeksi,
         "Proyeksi Harga (P)": proyeksi_harga,
-        "Biaya Ekstraksi (MC)": biaya_ekstraksi,
-        "Net Price (MUC)": net_price
+        "Biaya Ekstraksi (MC)": np.full(11, biaya_ekstraksi),
+        "MUC (Net Price)": proyeksi_muc
     })
 
     col_grafik, col_tabel = st.columns([3, 2])
+    
     with col_grafik:
-        st.subheader("Grafik Lintasan Harga Optimal")
-        st.line_chart(df_hostelling.set_index("Tahun")[["Proyeksi Harga (P)", "Net Price (MUC)"]])
+        st.subheader("Grafik Keseimbangan Nilai Intertemporal")
+        # Grafik menampilkan P dan MUC
+        st.line_chart(df_hotelling.set_index("Tahun")[["Proyeksi Harga (P)", "MUC (Net Price)"]])
+        
     with col_tabel:
         st.subheader("Tabel Proyeksi")
-        st.dataframe(df_hostelling.style.format("{:,.0f}"), use_container_width=True)
+        st.dataframe(df_hotelling.style.format("{:,.0f}"), use_container_width=True)
 
 with tab3:
     st.header("Analisis Struktur Pasar")
