@@ -102,7 +102,7 @@ with tab1:
         st.bar_chart(df.set_index("Tahun")["Q"], color="#795548") # Diberi warna cokelat kapur
 
 with tab2:
-    # 1. Judul Utama Komponen
+   # 1. Judul Utama Komponen
     st.title("Model Optimasi Hotelling")
     
     # 2. Menghitung Data Proyeksi (7 Tahun: 2025 - 2031)
@@ -136,34 +136,21 @@ with tab2:
         )
         
     with col_kanan:
-        # Membuat Grafik Menggunakan Matplotlib (Persis Gaya Milik Teman)
-        fig, ax = plt.subplots(figsize=(7, 4.2))
+        st.markdown("**Keseimbangan Nilai Intertemporal**")
         
-        # Line 1: Harga Proyeksi (Garis hijau solid dengan marker kotak)
-        ax.plot(
-            df_hotelling["Tahun"], df_hotelling["Harga (Rp)"], 
-            color='green', marker='s', linewidth=2, label="Harga Proyeksi"
+        # MEMBUAT GRAFIK TANPA MATPLOTLIB (MENGGUNAKAN BAWAAN STREAMLIT)
+        # Mengatur kolom 'Tahun' menjadi index agar otomatis menjadi Sumbu X di grafik
+        df_grafik = df_hotelling.set_index("Tahun")
+        
+        # Menampilkan line chart dengan pilihan warna khusus (Hijau untuk Harga, Biru untuk MUC)
+        st.line_chart(
+            df_grafik[["Harga (Rp)", "MUC (Rp)"]], 
+            color=["#16a34a", "#2563eb"]
         )
-        
-        # Line 2: MUC (Garis biru putus-putus tanpa marker)
-        ax.plot(
-            df_hotelling["Tahun"], df_hotelling["MUC (Rp)"], 
-            color='blue', linestyle='--', linewidth=2, label="MUC (Rente Kelangkaan)"
-        )
-        
-        # Atur Properti Visual Grafik agar Mirip
-        ax.set_title("Keseimbangan Nilai Intertemporal", fontsize=12)
-        ax.set_xticks(df_hotelling["Tahun"])
-        ax.ticklabel_format(style='plain', axis='y') # Mencegah format scientific (e10)
-        ax.grid(False) # Sesuai gambar teman yang polos tanpa grid kotak berat
-        ax.legend(loc="upper left")
-        
-        # Tampilkan Grafik ke Streamlit
-        st.pyplot(fig)
         
         # 4. Kotak Deskripsi Biru Gelap di Bawah Grafik
         st.markdown("""
-        <div style="background-color: #12233c; padding: 15px; border-radius: 4px; border-left: 4px solid #1d4ed8;">
+        <div style="background-color: #12233c; padding: 15px; border-radius: 4px; border-left: 4px solid #1d4ed8; margin-top: 10px;">
             <p style="color: #38bdf8; margin: 0; font-size: 13.5px; line-height: 1.5;">
                 <strong>Deskripsi:</strong> Grafik Kaidah Hotelling ini menggambarkan bahwa seiring menipisnya cadangan, 
                 nilai kelangkaan (MUC) meningkat secara eksponensial searah tingkat diskonto, yang mendorong harga proyeksi 
