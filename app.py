@@ -102,7 +102,6 @@ with tab1:
         st.bar_chart(df.set_index("Tahun")["Q"], color="#795548") # Diberi warna cokelat kapur
 
 with tab2:
-    with tab2:
     st.header("Analisis Aturan Hotelling (Hotelling's Rule)")
     
     # Menampilkan rumus yang sudah dikoreksi secara ekonomi
