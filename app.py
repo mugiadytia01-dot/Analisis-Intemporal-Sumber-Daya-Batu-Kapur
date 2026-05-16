@@ -37,6 +37,15 @@ muc_awal = st.sidebar.slider("MUC Awal (Rp)", min_value=0, max_value=500000, val
 pajak_karbon = st.sidebar.slider("Pajak Karbon Future (Rp)", min_value=0, max_value=100000, value=30000, step=1000)
 biaya_ekstraksi = st.sidebar.number_input("Biaya Ekstraksi (MC) - Rp/ton", value=500000, step=10000)
 
+# --- TAMBAHKAN KODE INI DI BAWAH BIAYA EKSTRAKSI PADA SIDEBAR ---
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Parameter Struktur Pasar")
+permintaan_max = st.sidebar.slider("Permintaan Maksimum (Choke Price)", 1000000, 3000000, 2000000)
+slope = st.sidebar.slider("Slope Permintaan (Sensitivity)", 0.01, 0.50, 0.10)
+jumlah_perusahaan = st.sidebar.slider("Jumlah Perusahaan di Pasar", 1, 10, 3)
+
+# ----------------------------------------------------------------
 st.sidebar.markdown("---")
 st.sidebar.write("💡 *Parameter di atas akan otomatis mengubah seluruh perhitungan di grafik.*")
 
