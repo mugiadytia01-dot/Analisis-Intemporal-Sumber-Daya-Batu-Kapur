@@ -160,7 +160,6 @@ with tab2:
         """, unsafe_allow_html=True)
 
 with tab3:
-    with tab3:
     st.title("Simulasi Dinamis Struktur Pasar")
     st.write("Gunakan slider di sidebar untuk melihat perubahan ekuilibrium pasar secara real-time.")
 
