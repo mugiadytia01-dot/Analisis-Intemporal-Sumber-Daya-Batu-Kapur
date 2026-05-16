@@ -102,40 +102,75 @@ with tab1:
         st.bar_chart(df.set_index("Tahun")["Q"], color="#795548") # Diberi warna cokelat kapur
 
 with tab2:
-    st.header("Analisis Aturan Hotelling (Hotelling's Rule)")
+    # 1. Judul Utama Komponen
+    st.title("Model Optimasi Hotelling")
     
-    # Menampilkan rumus yang sudah dikoreksi secara ekonomi
-    st.latex(r"MUC_t = MUC_0 (1 + r)^t")
-    st.latex(r"P_t = MC + MUC_t")
+    # 2. Menghitung Data Proyeksi (7 Tahun: 2025 - 2031)
+    tahun_proyeksi = np.arange(2025, 2032)
+    t_step = np.arange(0, 7)
     
-    st.write("Berdasarkan Aturan Hotelling, nilai kelangkaan (Marginal User Cost / MUC) dari sumber daya yang tidak dapat diperbarui akan meningkat sebesar tingkat diskonto. Harga pasar (P) terbentuk dari Biaya Ekstraksi (MC) ditambah MUC tersebut.")
-    
-    tahun_proyeksi = np.arange(2024, 2035)
-    t_step = np.arange(0, 11)
-    
-    # 1. Menghitung MUC yang tumbuh sesuai diskonto
+    # Perhitungan Kaidah Hotelling Akurat
     proyeksi_muc = muc_awal * (1 + diskonto)**t_step
-    
-    # 2. Menghitung Harga Pasar (P)
     proyeksi_harga = biaya_ekstraksi + proyeksi_muc
     
+    # Membuat DataFrame Utama
     df_hotelling = pd.DataFrame({
         "Tahun": tahun_proyeksi,
-        "Proyeksi Harga (P)": proyeksi_harga,
-        "Biaya Ekstraksi (MC)": np.full(11, biaya_ekstraksi),
-        "MUC (Net Price)": proyeksi_muc
+        "MUC (Rp)": proyeksi_muc,
+        "Harga (Rp)": proyeksi_harga
     })
 
-    col_grafik, col_tabel = st.columns([3, 2])
+    # 3. Membagi Layout Menjadi 2 Kolom (Kiri: Tabel, Kanan: Grafik)
+    col_kiri, col_kanan = st.columns([2, 3])
     
-    with col_grafik:
-        st.subheader("Grafik Keseimbangan Nilai Intertemporal")
-        # Grafik menampilkan P dan MUC
-        st.line_chart(df_hotelling.set_index("Tahun")[["Proyeksi Harga (P)", "MUC (Net Price)"]])
+    with col_kiri:
+        st.markdown("**Tabel Proyeksi Harga & MUC**")
+        # Menampilkan tabel dengan format ribuan tanpa desimal agar rapi
+        st.dataframe(
+            df_hotelling.style.format({
+                "Tahun": "{:.0f}",
+                "MUC (Rp)": "{:,.0f}",
+                "Harga (Rp)": "{:,.0f}"
+            }), 
+            use_container_width=True
+        )
         
-    with col_tabel:
-        st.subheader("Tabel Proyeksi")
-        st.dataframe(df_hotelling.style.format("{:,.0f}"), use_container_width=True)
+    with col_kanan:
+        # Membuat Grafik Menggunakan Matplotlib (Persis Gaya Milik Teman)
+        fig, ax = plt.subplots(figsize=(7, 4.2))
+        
+        # Line 1: Harga Proyeksi (Garis hijau solid dengan marker kotak)
+        ax.plot(
+            df_hotelling["Tahun"], df_hotelling["Harga (Rp)"], 
+            color='green', marker='s', linewidth=2, label="Harga Proyeksi"
+        )
+        
+        # Line 2: MUC (Garis biru putus-putus tanpa marker)
+        ax.plot(
+            df_hotelling["Tahun"], df_hotelling["MUC (Rp)"], 
+            color='blue', linestyle='--', linewidth=2, label="MUC (Rente Kelangkaan)"
+        )
+        
+        # Atur Properti Visual Grafik agar Mirip
+        ax.set_title("Keseimbangan Nilai Intertemporal", fontsize=12)
+        ax.set_xticks(df_hotelling["Tahun"])
+        ax.ticklabel_format(style='plain', axis='y') # Mencegah format scientific (e10)
+        ax.grid(False) # Sesuai gambar teman yang polos tanpa grid kotak berat
+        ax.legend(loc="upper left")
+        
+        # Tampilkan Grafik ke Streamlit
+        st.pyplot(fig)
+        
+        # 4. Kotak Deskripsi Biru Gelap di Bawah Grafik
+        st.markdown("""
+        <div style="background-color: #12233c; padding: 15px; border-radius: 4px; border-left: 4px solid #1d4ed8;">
+            <p style="color: #38bdf8; margin: 0; font-size: 13.5px; line-height: 1.5;">
+                <strong>Deskripsi:</strong> Grafik Kaidah Hotelling ini menggambarkan bahwa seiring menipisnya cadangan, 
+                nilai kelangkaan (MUC) meningkat secara eksponensial searah tingkat diskonto, yang mendorong harga proyeksi 
+                batu kapur terus naik di masa depan.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 with tab3:
     st.header("Analisis Struktur Pasar")
