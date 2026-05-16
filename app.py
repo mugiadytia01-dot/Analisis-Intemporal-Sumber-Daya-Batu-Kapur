@@ -160,21 +160,40 @@ with tab2:
         """, unsafe_allow_html=True)
 
 with tab3:
-    st.header("Analisis Struktur Pasar")
-    pilihan_pasar = st.selectbox("Pilih Model:", ["Persaingan Sempurna", "Monopoli", "Oligopoli"])
-    q_sim = np.linspace(1, 20, 20)
-    mc_sim = 2 + 1 * q_sim
-    if pilihan_pasar == "Persaingan Sempurna":
-        p_sim = np.full_like(q_sim, 15)
-        df_p = pd.DataFrame({"Q": q_sim, "P=D": p_sim, "MC": mc_sim}).set_index("Q")
-    elif pilihan_pasar == "Monopoli":
-        p_sim = 30 - 1 * q_sim
-        mr_sim = 30 - 2 * q_sim
-        df_p = pd.DataFrame({"Q": q_sim, "D": p_sim, "MR": mr_sim, "MC": mc_sim}).set_index("Q")
-    else:
-        p_sim = np.where(q_sim <= 10, 25 - 0.5 * q_sim, 40 - 2 * q_sim)
-        df_p = pd.DataFrame({"Q": q_sim, "D": p_sim, "MC": mc_sim}).set_index("Q")
-    st.line_chart(df_p)
+    with tab3:
+    st.title("Simulasi Dinamis Struktur Pasar")
+    st.write("Gunakan slider di sidebar untuk melihat perubahan ekuilibrium pasar secara real-time.")
+
+    # 1. LOGIKA PERHITUNGAN DINAMIS
+    # Menghitung output Cournot atau Monopoli berdasarkan input
+    q_range = np.linspace(0, permintaan_max / slope, 100)
+    
+    # Fungsi Permintaan: P = A - B*Q
+    def hitung_harga(q):
+        return permintaan_max - (slope * q)
+
+    # Ekuilibrium Pasar (Penyederhanaan Model Cournot)
+    q_opt_total = (permintaan_max - biaya_marginal) / (slope * (jumlah_perusahaan + 1))
+    p_opt = hitung_harga(q_opt_total)
+    profit_per_perusahaan = (p_opt - biaya_marginal) * (q_opt_total / jumlah_perusahaan)
+
+    # 2. VISUALISASI DINAMIS (Menggunakan st.line_chart agar ringan & bergerak)
+    df_plot = pd.DataFrame({
+        "Kuantitas": q_range,
+        "Harga Permintaan": [hitung_harga(q) for q in q_range],
+        "Biaya Marginal (MC)": [biaya_marginal] * 100
+    }).set_index("Kuantitas")
+
+    st.subheader("Kurva Permintaan vs Biaya")
+    st.line_chart(df_plot)
+
+    # 3. OUTPUT METRIK DINAMIS
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total Output Pasar", f"{q_opt_total:,.2f} Ton")
+    col2.metric("Harga Ekuilibrium", f"Rp {p_opt:,.0f}")
+    col3.metric("Profit Per Perusahaan", f"Rp {profit_per_perusahaan:,.0f}")
+
+    st.info(f"Saat ini pasar diasumsikan sebagai **{'Monopoli' if jumlah_perusahaan == 1 else 'Oligopoli'}**.")
 
 with tab4:
     st.header("Simulasi Penurunan Stok Sumber Daya (Deplesi)")
