@@ -64,7 +64,7 @@ st.sidebar.markdown("<h4 style='text-align: center; color: gray;'>FEB UNISBA | E
 # ==========================================
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📂 Data & Cadangan", 
-    "📈 Analisis Hostelling", 
+    "📈 Analisis Hotelling", 
     "🏢 Struktur Pasar", 
     "🔋 Simulasi Stok", 
     "🌿 Green Paradox"
@@ -303,29 +303,133 @@ with tab3:
     """)
     
 with tab4:
-    st.header("Simulasi Penurunan Stok Sumber Daya (Deplesi)")
-    cadangan_awal = st.number_input("Masukkan Estimasi Cadangan Awal Tahun 2014 (Ton / Juta Ton)", min_value=50.0, value=250.0, step=10.0)
+    st.title("Simulasi Deplesi Stok: Persaingan vs Oligopoli vs Monopoli")
     
-    df_stok = df[['Tahun', 'Q']].copy()
-    df_stok.rename(columns={'Q': 'Ekstraksi Tahunan'}, inplace=True)
+    st.info("""
+    **Model Intertemporal Dinamis:** Bagian ini mensimulasikan bagaimana ketiga struktur pasar menguras cadangan batu kapur dari tahun ke tahun. 
+    Menggabungkan **Aturan Hotelling** ($MUC_t = MUC_0(1+r)^t$) dengan perilaku pasar untuk melihat proyeksi Produksi, Harga, dan Sisa Cadangan.
+    """)
     
-    rata_ekstraksi = df_stok['Ekstraksi Tahunan'].mean()
-    tahun_proyeksi_stok = np.arange(2025, 2035)
-    ekstraksi_proyeksi = np.full(10, rata_ekstraksi) 
-    
-    df_proyeksi_stok = pd.DataFrame({'Tahun': tahun_proyeksi_stok, 'Ekstraksi Tahunan': ekstraksi_proyeksi})
-    df_full_stok = pd.concat([df_stok, df_proyeksi_stok], ignore_index=True)
-    df_full_stok['Sisa Cadangan'] = cadangan_awal - df_full_stok['Ekstraksi Tahunan'].cumsum()
-    df_full_stok['Sisa Cadangan'] = df_full_stok['Sisa Cadangan'].apply(lambda x: max(0, x))
-    
-    col_graf_stok, col_tab_stok = st.columns([3, 2])
-    with col_graf_stok:
-        st.subheader("Grafik Sisa Cadangan")
-        st.area_chart(df_full_stok.set_index("Tahun")["Sisa Cadangan"], color="#00C853")
-    with col_tab_stok:
-        st.subheader("Tabel Laju Deplesi")
-        st.dataframe(df_full_stok.style.format("{:,.1f}"), use_container_width=True)
+    # 1. Input Parameter Khusus Simulasi Stok
+    col_input1, col_input2 = st.columns(2)
+    with col_input1:
+        stok_awal_kapur = st.number_input("Estimasi Total Cadangan Awal (Ton)", min_value=10000000, value=100000000, step=10000000)
+    with col_input2:
+        tahun_simulasi = st.slider("Durasi Proyeksi (Tahun)", 5, 30, 15)
 
+    st.markdown("---")
+
+    # 2. Setup Data Time-Series
+    T_years = np.arange(2025, 2025 + tahun_simulasi)
+    
+    # Variabel Penyimpanan (Arrays)
+    q_pc, p_pc, s_pc = [], [], []
+    q_oli, p_oli, s_oli = [], [], []
+    q_mono, p_mono, s_mono = [], [], []
+    
+    # Inisialisasi Stok Berjalan
+    curr_s_pc = stok_awal_kapur
+    curr_s_oli = stok_awal_kapur
+    curr_s_mono = stok_awal_kapur
+    
+    n_perusahaan = jumlah_perusahaan # Mengambil nilai dari slider sidebar
+    
+    # 3. Looping Simulasi (Menghitung dinamika pasar dari tahun ke tahun)
+    for t in range(tahun_simulasi):
+        # MUC naik setiap tahun sesuai diskonto
+        muc_t = muc_awal * (1 + diskonto)**t 
+        biaya_total_t = biaya_ekstraksi + muc_t
+        
+        # A. PASAR PERSAINGAN SEMPURNA (P = MC + MUC)
+        if curr_s_pc > 0:
+            # Q = (A - Biaya) / B
+            q_tmp_pc = max(0, (permintaan_max - biaya_total_t) / slope)
+            # Jika Q produksi melebihi sisa stok, maka produksi = sisa stok
+            if curr_s_pc < q_tmp_pc: q_tmp_pc = curr_s_pc
+            p_tmp_pc = permintaan_max - (slope * q_tmp_pc)
+            curr_s_pc -= q_tmp_pc
+        else:
+            q_tmp_pc, p_tmp_pc = 0, 0
+        
+        q_pc.append(q_tmp_pc); p_pc.append(p_tmp_pc); s_pc.append(curr_s_pc)
+        
+        # B. PASAR OLIGOPOLI (Model Cournot)
+        if curr_s_oli > 0:
+            # Q = (n/(n+1)) * ((A - Biaya) / B)
+            q_tmp_oli = max(0, (n_perusahaan / (n_perusahaan + 1)) * ((permintaan_max - biaya_total_t) / slope))
+            if curr_s_oli < q_tmp_oli: q_tmp_oli = curr_s_oli
+            p_tmp_oli = permintaan_max - (slope * q_tmp_oli)
+            curr_s_oli -= q_tmp_oli
+        else:
+            q_tmp_oli, p_tmp_oli = 0, 0
+            
+        q_oli.append(q_tmp_oli); p_oli.append(p_tmp_oli); s_oli.append(curr_s_oli)
+        
+        # C. PASAR MONOPOLI (MR = MC + MUC)
+        if curr_s_mono > 0:
+            # Q = (A - Biaya) / 2B
+            q_tmp_mono = max(0, (permintaan_max - biaya_total_t) / (2 * slope))
+            if curr_s_mono < q_tmp_mono: q_tmp_mono = curr_s_mono
+            p_tmp_mono = permintaan_max - (slope * q_tmp_mono)
+            curr_s_mono -= q_tmp_mono
+        else:
+            q_tmp_mono, p_tmp_mono = 0, 0
+            
+        q_mono.append(q_tmp_mono); p_mono.append(p_tmp_mono); s_mono.append(curr_s_mono)
+
+    # 4. Membungkus Data ke dalam DataFrame
+    df_produksi = pd.DataFrame({
+        "Tahun": T_years,
+        "Persaingan Sempurna": q_pc,
+        f"Oligopoli (n={n_perusahaan})": q_oli,
+        "Monopoli": q_mono
+    }).set_index("Tahun")
+
+    df_stok = pd.DataFrame({
+        "Tahun": T_years,
+        "Persaingan Sempurna": s_pc,
+        f"Oligopoli (n={n_perusahaan})": s_oli,
+        "Monopoli": s_mono
+    }).set_index("Tahun")
+
+    df_harga = pd.DataFrame({
+        "Tahun": T_years,
+        "Persaingan Sempurna": p_pc,
+        f"Oligopoli (n={n_perusahaan})": p_oli,
+        "Monopoli": p_mono
+    }).set_index("Tahun")
+
+    # 5. Menampilkan 3 Grafik Utama (Menggunakan Native Streamlit Chart)
+    warna_grafik = ["#ef4444", "#3b82f6", "#10b981"] # Merah (PC), Biru (Oligo), Hijau (Mono)
+    
+    st.subheader("1. Laju Produksi Ekstraksi Batu Kapur (Ton/Tahun)")
+    st.line_chart(df_produksi, color=warna_grafik)
+    
+    st.subheader("2. Penurunan Sisa Stok Cadangan (Ton)")
+    st.line_chart(df_stok, color=warna_grafik)
+    
+    st.subheader("3. Simulasi Pergerakan Harga Pasar (Rp/Ton)")
+    st.line_chart(df_harga, color=warna_grafik)
+
+    # 6. Tabel Rangkuman Data Terakhir (Tahun ke-N)
+    st.markdown("---")
+    st.subheader(f"Tabel Rekapitulasi Kondisi Tahun {T_years[-1]}")
+    
+    df_rekap = pd.DataFrame({
+        "Struktur Pasar": ["Persaingan Sempurna", f"Oligopoli (n={n_perusahaan})", "Monopoli"],
+        "Sisa Cadangan (Ton)": [s_pc[-1], s_oli[-1], s_mono[-1]],
+        "Harga Akhir (Rp)": [p_pc[-1], p_oli[-1], p_mono[-1]],
+        "Status Cadangan": [
+            "Habis (Terkuras)" if s_pc[-1] <= 0 else "Masih Ada",
+            "Habis (Terkuras)" if s_oli[-1] <= 0 else "Masih Ada",
+            "Habis (Terkuras)" if s_mono[-1] <= 0 else "Masih Ada"
+        ]
+    })
+    
+    st.dataframe(df_rekap.style.format({
+        "Sisa Cadangan (Ton)": "{:,.0f}",
+        "Harga Akhir (Rp)": "{:,.0f}"
+    }), use_container_width=True)
 with tab5:
     st.header("🌿 Analisis Green Paradox")
     st.write("Fenomena **Green Paradox** terjadi ketika pengumuman kebijakan lingkungan di masa depan (misal: pajak karbon) justru memicu produsen untuk mempercepat ekstraksi sumber daya saat ini demi menghindari beban pajak tersebut, yang malah meningkatkan emisi dalam jangka pendek.")
